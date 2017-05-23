@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -136,6 +137,67 @@ public class MainActivity extends AppCompatActivity {
                 float centerYt = location[1] + textView.getHeight()/2;
                 float radiust = 150f;
                 mCanvas.drawCircle(centerXt, centerYt, radiust, mPaint);
+
+                // custom drawing code here
+                // remember: y increases from top to bottom
+                // x increases from left to right
+                mCanvas.save();
+                mCanvas.translate(100, 200);
+                // make the entire canvas white
+               // mCanvas.drawColor(Color.WHITE);
+
+                Paint textPaint = new Paint();
+                // draw some text using STROKE style
+                textPaint.setStyle(Paint.Style.STROKE);
+                textPaint.setStrokeWidth(1);
+                textPaint.setColor(Color.MAGENTA);
+                textPaint.setTextSize(100);
+                mCanvas.drawText("Style.STROKE", 0, 0, textPaint);
+
+                mCanvas.translate(0, 200);
+
+                // draw some text using FILL style
+                textPaint.setStyle(Paint.Style.FILL);
+                //turn antialiasing on
+                textPaint.setAntiAlias(true);
+                //paint.setTextSize(30);
+                mCanvas.drawText("Style.FILL", 0, 0, textPaint);
+//                textPaint.setTextSize(50f);
+//                textPaint.setTextScaleX(6f);
+//                textPaint.setTextSkewX(0.1f);
+
+                mCanvas.translate(0, 200);
+                // draw some rotated text
+                // get text width and height
+                // set desired drawing location
+                int x = 75;
+                int y = 185;
+                textPaint.setColor(Color.WHITE);
+                //paint.setTextSize(25);
+                String str2rotate = "Rotated!";
+                // draw bounding rect before rotating text
+                Rect rect = new Rect();
+                textPaint.getTextBounds(str2rotate, 0, str2rotate.length(), rect);
+                mCanvas.translate(x, y);
+                textPaint.setStyle(Paint.Style.FILL);
+
+                // draw unrotated text
+                mCanvas.drawText("!Rotated", 0, 0, textPaint);
+
+                textPaint.setStyle(Paint.Style.STROKE);
+                mCanvas.drawRect(rect, textPaint);
+                // undo the translate
+                mCanvas.translate(-x, -y);
+
+                // rotate the canvas on center of the text to draw
+                mCanvas.rotate(-45, x + rect.exactCenterX(),
+                        y + rect.exactCenterY());
+                // draw the rotated text
+                textPaint.setStyle(Paint.Style.FILL);
+                mCanvas.drawText(str2rotate, x, y, textPaint);
+
+                //undo the translation and rotation
+                mCanvas.restore();
             }
 
             canvas.drawBitmap(mWindowFrame, 0, 0, null);
