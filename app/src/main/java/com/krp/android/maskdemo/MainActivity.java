@@ -7,30 +7,37 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
-import android.graphics.Rect;
+import android.graphics.RectF;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
+
+    TextView textView;
+    FloatingActionButton fab;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         final View contentView = LayoutInflater.from(this).inflate(R.layout.activity_main, null);
-        //setContentView(contentView);
+        setContentView(contentView);
         Toolbar toolbar = (Toolbar) contentView.findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) contentView.findViewById(R.id.fab);
+        textView = (TextView) findViewById(R.id.hellow);
+
+        fab = (FloatingActionButton) contentView.findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -39,30 +46,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Bitmap bitmap = Utility.getMarkerBitmapFromView(this, contentView);
 
-
-        ImageView imageView = new ImageView(this);
-        imageView.setImageBitmap(bitmap);
-        imageView.setOnClickListener(new View.OnClickListener() {
+        final ViewGroup vg = (ViewGroup) getWindow().getDecorView().getRootView();
+        final OverlayView overlayView = new OverlayView(this);
+        overlayView.setOnRedeemOverlayListener(new OnRedeemOverlayListener() {
             @Override
-            public void onClick(View v) {
-                setContentView(contentView);
+            public void onRedeemedOverlay() {
+                vg.removeView(overlayView);
             }
         });
-
-        Paint maskPaint = new Paint();
-        maskPaint.setColor(Color.TRANSPARENT);
-        maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
-        maskPaint.setStyle(Paint.Style.FILL);
-
-        Bitmap mask = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
-        Canvas maskCanvas = new Canvas(mask);
-        maskCanvas.drawCircle(100, 100, 40, maskPaint);
-
-
-        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        setContentView(new OverlayView(this, contentView), params);
+        vg.addView(overlayView);
     }
 
     @Override
@@ -88,49 +81,103 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    class OverlayView extends View {
-        Bitmap bitmap;
-        FloatingActionButton fab;
+    public interface OnRedeemOverlayListener {
+        void onRedeemedOverlay();
+    }
 
-        public OverlayView(Context context, View contentView) {
-            super(context);
-            bitmap = Utility.getMarkerBitmapFromView(context, contentView);
+    public class OverlayView extends View {
+        private Bitmap mWindowFrame;
+        private Canvas mCanvas;
+        private RectF mOuterRectangle;
+        private final Paint mPaint;
+        private final PorterDuffXfermode mXfermode;
 
-            fab = (FloatingActionButton) contentView.findViewById(R.id.fab);
+        private OnRedeemOverlayListener mOnRedeemOverlayListener;
+
+        public OverlayView(Context pContext) {
+            this(pContext, null);
         }
 
+        public OverlayView(Context pContext, AttributeSet attr) {
+            super(pContext, attr);
+            mOuterRectangle = new RectF();
+            mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mXfermode = new PorterDuffXfermode(PorterDuff.Mode.CLEAR);
+        }
+
+        public void setOnRedeemOverlayListener(OnRedeemOverlayListener listener) {
+            mOnRedeemOverlayListener = listener;
+        }
 
         @Override
-        public void onDraw(Canvas canvas) {
-            Paint paint = new Paint();
-            // paint.setColor(Color.CYAN);
-            canvas.drawBitmap(getclip(), 30, 20, paint);
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (mWindowFrame == null) {
+                mWindowFrame = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+                mCanvas = new Canvas(mWindowFrame);
+
+                mPaint.setColor(Color.parseColor("#A0000000"));
+                mOuterRectangle.set(0, 0, getWidth(), getHeight());
+                mCanvas.drawRect(mOuterRectangle, mPaint);
+
+                mPaint.setColor(Color.TRANSPARENT);
+                mPaint.setXfermode(mXfermode);
+
+                int[] location = new int[2];
+                fab.getLocationOnScreen(location);
+                float centerX = location[0] + fab.getWidth()/2;
+                float centerY = location[1] + fab.getHeight()/2;
+                float radius = 150f;
+                mCanvas.drawCircle(centerX, centerY, radius, mPaint);
+
+
+                textView.getLocationOnScreen(location);
+                float centerXt = location[0] + textView.getWidth()/2;
+                float centerYt = location[1] + textView.getHeight()/2;
+                float radiust = 150f;
+                mCanvas.drawCircle(centerXt, centerYt, radiust, mPaint);
+            }
+
+            canvas.drawBitmap(mWindowFrame, 0, 0, null);
         }
 
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            int eventAction = event.getAction();
 
-        public Bitmap getclip() {
-            Bitmap output = Bitmap.createBitmap(bitmap.getWidth(),
-                    bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(output);
-            final int color = 0xff424242;
-            Paint paint = new Paint();
+            // you may need the x/y location
+            float x = event.getX();
+            float y = event.getY();
 
+            // put your code here to handle the event
+            switch (eventAction) {
+                case MotionEvent.ACTION_DOWN : {
+                    int[] location = new int[2];
+                    fab.getLocationOnScreen(location);
 
-            fab.measure(View.MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
-                    View.MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                    if(x >= location[0] && x <= location[0]+fab.getWidth() &&
+                            y >= location[1] && y <= location[1]+fab.getHeight() &&
+                            mOnRedeemOverlayListener != null) {
+                        mOnRedeemOverlayListener.onRedeemedOverlay();
+                    }
+                    break;
+                }
 
+                case MotionEvent.ACTION_UP : {
+                    break;
+                }
 
-            final Rect rect = new Rect(0, 0, bitmap.getWidth(),
-                    bitmap.getHeight());
+                case MotionEvent.ACTION_MOVE : {
+                    break;
+                }
+            }
 
-            paint.setAntiAlias(true);
-            canvas.drawARGB(61, 172, 163, 166);
-            // paint.setColor(color);
-            canvas.drawCircle(/*bitmap.getWidth() / 2*/fab.getX(),
-                    /*bitmap.getHeight() / 2*/fab.getY(), bitmap.getWidth() / 4, paint);
-            paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-            canvas.drawBitmap(bitmap, rect, rect, paint);
-            return output;
+            // tell the View to redraw the Canvas
+            invalidate();
+
+            // tell the View that we handled the event
+            return true;
         }
+
     }
 }
